@@ -25,7 +25,6 @@ class UpdateInvitationRequest extends FormRequest
     public function rules()
     {
         return [
-            'invitation' => 'required|numeric|exists:invitations,id',
             'confirmation' => ['nullable', Rule::in(['yes', 'no'])],
             'guests' => 'nullable|numeric',
             'plus_one' => ['nullable', Rule::in(['yes', 'no'])],

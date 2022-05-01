@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateInvitationRequest;
 use App\Models\Invitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -93,11 +94,11 @@ class InvitationController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show(Request $request)
+    public function show(Request $request, Invitation $invitation)
     {
         try {
             $rules = [
-                'pin' => 'required|numeric',
+                'pin' => 'nullable|numeric',
                 'surname' => 'required|string',
             ];
 
@@ -107,11 +108,21 @@ class InvitationController extends Controller
                 dd($validator->messages()->first());
             }
 
-            $invitation = Invitation::where(['surname' => $request->surname, 'pin' => $request->pin])->firstOrFail();
+            $pin = $request->is('api/*') ? $request->pin : intval($invitation->pin);
 
-            return response([
-                'invitation' => $invitation,
-            ]);
+            $surname = $request->is('api/*') ? $request->surname : $invitation->surname;
+
+            $invitation = Invitation::where(['surname' => $surname, 'pin' => $pin])->firstOrFail();
+
+            if ($request->is('api/*')) {
+
+                return response([
+                    'invitation' => $invitation,
+                ]);
+
+            } else {
+                return view('invitations.show', compact('invitation'));
+            }
 
         } catch (\Exception $e) {
             return response([
@@ -119,6 +130,7 @@ class InvitationController extends Controller
                 'meessage' => $e->getMessage(),
             ]);
         }
+
     }
 
     /**
@@ -127,9 +139,9 @@ class InvitationController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(Invitation $invitation)
     {
-        dd('Edit');
+        return view('invitations.edit', compact('invitation'));
     }
 
     /**
@@ -139,52 +151,68 @@ class InvitationController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request)
+    public function update(Request $request, UpdateInvitationRequest $adminRequest, Invitation $invitation)
     {
-        try {
-            $allowedFields = [
-                'confirmation',
-                'plus_one',
-                'guests',
-            ];
 
-            // Checking if the $request doesn't contain any of the allowed fields
-            if (!$request->hasAny($allowedFields)) {
-                throw new \Exception('Field not allowed');
+        if ($request->is('api/*')) {
+            try {
+                $allowedFields = [
+                    'confirmation',
+                    'plus_one',
+                    'guests',
+                    'surname',
+                    'display_name',
+                ];
+
+                // Checking if the $request doesn't contain any of the allowed fields
+                if (!$request->hasAny($allowedFields)) {
+                    throw new \Exception('Field not allowed');
+                }
+
+                $rules = [
+                    'invitation' => 'required|numeric|exists:invitations,id',
+                    'confirmation' => ['nullable', Rule::in(['yes', 'no'])],
+                    'guests' => 'nullable|numeric',
+                    'plus_one' => ['nullable', Rule::in(['yes', 'no'])],
+                ];
+
+                $validator = Validator::make($request->all(), $rules);
+
+                if ($validator->fails()) {
+                    dd($validator->messages()->first());
+                }
+
+                $invitation = Invitation::findOrFail($request->invitation);
+
+                $this->updateModel($invitation, $request->all(), 'invitation');
+
+                // if (!updatedInvitation) {
+                //     throw new \Exception('Something went while updating invitation');
+                // }
+
+                return response([
+                    'success' => true,
+                    'invitation' => $invitation->latest('updated_at')->first(),
+                ]);
+
+            } catch (\Exception $e) {
+                return response([
+                    'success' => false,
+                    'meessage' => $e->getMessage(),
+                ]);
             }
+        } else {
+            $invitation->update($adminRequest->validated());
 
-            $rules = [
-                'invitation' => 'required|numeric|exists:invitations,id',
-                'confirmation' => ['nullable', Rule::in(['yes', 'no'])],
-                'guests' => 'nullable|numeric',
-                'plus_one' => ['nullable', Rule::in(['yes', 'no'])],
-            ];
-
-            $validator = Validator::make($request->all(), $rules);
-
-            if ($validator->fails()) {
-                dd($validator->messages()->first());
-            }
-
-            $invitation = Invitation::findOrFail($request->invitation);
-
-            $this->updateModel($invitation, $request->all(), 'invitation');
-
-            // if (!updatedInvitation) {
-            //     throw new \Exception('Something went while updating invitation');
-            // }
-
-            return response([
-                'success' => true,
-                'invitation' => $invitation->latest('updated_at')->first(),
-            ]);
-
-        } catch (\Exception $e) {
-            return response([
-                'success' => false,
-                'meessage' => $e->getMessage(),
-            ]);
+            return redirect()->route('invitations.index');
         }
+
+    }
+
+    public function updateInvitation(UpdateInvitationRequest $request, Invitation $invitation)
+    {
+        //
+
     }
 
     /**
