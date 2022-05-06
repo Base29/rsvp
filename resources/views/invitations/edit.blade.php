@@ -11,8 +11,9 @@
     <div class="md:grid md:grid-cols-3 md:gap-6">
 
       <div class="mt-5 md:mt-0 md:col-span-2">
-        <form action="{{ route('invitations.update', $invitation->id) }} method="POST">
+        <form method="post" action="{{ route('invitations.update', $invitation->id ) }}">
         @csrf
+        @method('PATCH')
           <div class="shadow overflow-hidden sm:rounded-md">
             <div class="px-4 py-5 bg-white sm:p-6">
               <div class="grid grid-cols-6 gap-6">
@@ -54,9 +55,10 @@
                         id="notes"
                         name="notes"
                         rows="3"
-                        placeholder="Your note"
-                        value="{{ old('notes', $invitation->notes) }}"
-                      ></textarea>
+                        placeholder="Your notes"
+                        value="{{ $invitation->notes }}"
+                      >
+                      {{ $invitation->notes }}</textarea>
                     </div>
                   
               </div>
@@ -66,6 +68,19 @@
             </div>
           </div>
         </form>
+        {{-- <form method="post" action="{{ route('invitations.update', $invitation->id ) }}">
+          <div class="form-group">
+              @csrf
+              @method('PATCH')
+              <label for="country_name">Game Name:</label>
+              <input type="text" class="form-control" name="surname" value="{{ $invitation->surname }}"/>
+          </div>
+          <div class="form-group">
+              <label for="cases">Game Price :</label>
+              <input type="text" class="form-control" name="display_name" value="{{ $invitation->display_name }}"/>
+          </div>
+          <button type="submit" class="btn btn-primary">Update Data</button>
+      </form> --}}
       </div>
     </div>
   </div>

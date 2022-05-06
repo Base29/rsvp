@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdateInvitationRequest;
 use App\Models\Invitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -121,7 +120,7 @@ class InvitationController extends Controller
                 ]);
 
             } else {
-                return view('invitations.show', compact('invitation'));
+                return redirect()->route('invitations.index');
             }
 
         } catch (\Exception $e) {
@@ -139,8 +138,10 @@ class InvitationController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit(Invitation $invitation)
+    public function edit($id)
     {
+        $invitation = Invitation::findOrFail($id);
+
         return view('invitations.edit', compact('invitation'));
     }
 
@@ -151,10 +152,23 @@ class InvitationController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, UpdateInvitationRequest $adminRequest, Invitation $invitation)
+    public function update(Request $request, $id = null)
     {
 
-        if ($request->is('api/*')) {
+        if (!$request->is('api/*')) {
+
+            $validatedData = $request->validate([
+                'surname' => 'nullable|string',
+                'display_name' => 'nullable|string',
+                'confirmation' => ['nullable', Rule::in(['yes', 'no'])],
+                'guests' => 'nullable|numeric',
+                'plus_one' => ['nullable', Rule::in(['yes', 'no'])],
+                'notes' => 'nullable|string|max:100',
+            ]);
+
+            Invitation::where('id', $id)->update($validatedData);
+            return redirect()->route('invitations.index');
+        } else {
             try {
                 $allowedFields = [
                     'confirmation',
@@ -201,18 +215,7 @@ class InvitationController extends Controller
                     'meessage' => $e->getMessage(),
                 ]);
             }
-        } else {
-            $invitation->update($adminRequest->validated());
-
-            return redirect()->route('invitations.index');
         }
-
-    }
-
-    public function updateInvitation(UpdateInvitationRequest $request, Invitation $invitation)
-    {
-        //
-
     }
 
     /**
@@ -222,6 +225,14 @@ class InvitationController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
+    {
+        $invitation = Invitation::findOrFail($id);
+        $invitation->delete();
+
+        return redirect('/invitations')->with('success', 'Invitation Data is successfully deleted');
+    }
+
+    public function updateInvitation(Request $request)
     {
         //
     }
@@ -246,4 +257,5 @@ class InvitationController extends Controller
             ]);
         }
     }
+
 }
